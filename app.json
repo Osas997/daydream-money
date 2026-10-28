@@ -28,7 +28,8 @@
       "expo-font",
       "expo-sqlite",
       "expo-secure-store",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-document-picker"
     ],
     "extra": {
       "router": {

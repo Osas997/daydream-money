@@ -24,6 +24,8 @@ import * as txRepo from '../../db/repositories/transactionsRepo';
 import * as settingsRepo from '../../db/repositories/settingsRepo';
 import { exportTransactionsToPDF } from '../../lib/pdfExporter';
 import { exportTransactionsToExcel } from '../../lib/excelExporter';
+import { exportBackup, importBackup } from '../../lib/backupManager';
+import { importTransactionsFromExcel } from '../../lib/excelImporter';
 import { colors, radius, spacing } from '../../theme/tokens';
 import { typography } from '../../theme/typography';
 
@@ -143,6 +145,71 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleExportBackup = async () => {
+    if (exporting) return;
+    try {
+      setExporting(true);
+      await exportBackup();
+    } catch (e: any) {
+      Alert.alert('Gagal Ekspor Cadangan', e?.message || 'Terjadi kesalahan saat mengekspor data cadangan.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleImportBackup = () => {
+    Alert.alert(
+      'Pulihkan Cadangan (.mmbak)',
+      'Memulihkan berkas cadangan akan menimpa seluruh data dan transaksi saat ini. Pastikan Anda telah mencadangkan data penting sebelumnya. Lanjutkan?',
+      [
+        { text: 'Batal', style: 'cancel' },
+        {
+          text: 'Pilih Berkas & Pulihkan',
+          onPress: async () => {
+            try {
+              setExporting(true);
+              const result = await importBackup();
+              if (result) {
+                await refreshSettings();
+                await refreshWallets();
+                await refreshCategories();
+                await refreshTransactions(monthStartDay);
+                Alert.alert(
+                  'Pemulihan Berhasil',
+                  `Berhasil memulihkan ${result.transactionCount} transaksi dan ${result.walletCount} dompet.`
+                );
+              }
+            } catch (e: any) {
+              Alert.alert('Gagal Impor Cadangan', e?.message || 'Berkas cadangan tidak valid atau rusak.');
+            } finally {
+              setExporting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleImportExcel = async () => {
+    try {
+      setExporting(true);
+      const result = await importTransactionsFromExcel();
+      if (result) {
+        await refreshWallets();
+        await refreshCategories();
+        await refreshTransactions(monthStartDay);
+        Alert.alert(
+          'Impor Selesai',
+          `Berhasil menambahkan ${result.importedCount} transaksi dari spreadsheet Excel.`
+        );
+      }
+    } catch (e: any) {
+      Alert.alert('Gagal Impor Excel', e?.message || 'Terjadi kesalahan saat mengimpor data Excel.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const handleResetData = () => {
     Alert.alert(
       'Reset Semua Data',
@@ -240,9 +307,28 @@ export default function SettingsScreen() {
           }
         />
 
-        {/* Data & Export */}
+        {/* Backup & Data Section */}
         <Text style={[typography.labelUppercase, styles.sectionHeader, { marginTop: spacing.md }]}>
-          DATA & CADANGAN
+          CADANGAN & PEMULIHAN (.MMBAK)
+        </Text>
+
+        <ListRow
+          title="Ekspor Cadangan (.mmbak)"
+          subtitle="Simpan data ke berkas @MM(...).mmbak untuk dipindahkan"
+          icon="backup"
+          onPress={handleExportBackup}
+        />
+
+        <ListRow
+          title="Impor Cadangan (.mmbak)"
+          subtitle="Pulihkan seluruh data aplikasi dari berkas .mmbak"
+          icon="upload"
+          onPress={handleImportBackup}
+        />
+
+        {/* Documents Export & Import */}
+        <Text style={[typography.labelUppercase, styles.sectionHeader, { marginTop: spacing.md }]}>
+          DOKUMEN & SPREADSHEET
         </Text>
 
         <ListRow
@@ -257,6 +343,13 @@ export default function SettingsScreen() {
           subtitle="Unduh riwayat transaksi ke spreadsheet Excel"
           icon="excel"
           onPress={handleExportExcel}
+        />
+
+        <ListRow
+          title="Impor Excel (.xlsx)"
+          subtitle="Masukkan data transaksi dari berkas spreadsheet Excel"
+          icon="excel"
+          onPress={handleImportExcel}
         />
 
         <ListRow

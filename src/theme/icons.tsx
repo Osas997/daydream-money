@@ -45,6 +45,8 @@ import {
   HelpCircle,
   FileText,
   FileSpreadsheet,
+  Upload,
+  Database,
   LucideProps,
 } from 'lucide-react-native';
 
@@ -90,6 +92,8 @@ export type IconName =
   | 'expense'
   | 'shield'
   | 'download'
+  | 'upload'
+  | 'backup'
   | 'pdf'
   | 'excel'
   | 'alert';
@@ -136,6 +140,8 @@ const iconMap: Record<string, React.FC<LucideProps>> = {
   expense: ArrowUpRight,
   shield: ShieldCheck,
   download: Download,
+  upload: Upload,
+  backup: Database,
   pdf: FileText,
   excel: FileSpreadsheet,
   alert: AlertCircle,
