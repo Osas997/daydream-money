@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "temp-init",
-    "slug": "temp-init",
+    "name": "Pencatat Keuangan",
+    "slug": "pencatat-keuangan",
+    "scheme": "pencatat-keuangan",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,6 +11,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.daydreammoney.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -20,6 +22,23 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-sqlite",
+      "expo-secure-store",
+      "expo-sharing"
+    ],
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "86e75b99-4d87-4d9b-98f8-76ea18c12c2b"
+      }
     }
   }
 }
