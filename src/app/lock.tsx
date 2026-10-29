@@ -125,8 +125,11 @@ export default function LockScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    maxWidth: 420,
+    width: '100%',
+    alignSelf: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.gutter,
+    paddingHorizontal: 16,
   },
   topArea: {
     alignItems: 'center',

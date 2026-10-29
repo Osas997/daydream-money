@@ -208,14 +208,20 @@ export default function CategoriesScreen() {
 const styles = StyleSheet.create({
   tabRow: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.gutter,
+    maxWidth: 520,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: 16,
     paddingVertical: spacing.sm,
   },
   tabChip: {
     marginRight: 8,
   },
   content: {
-    paddingHorizontal: spacing.gutter,
+    maxWidth: 520,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: 16,
     paddingTop: 4,
   },
   archiveBtn: {

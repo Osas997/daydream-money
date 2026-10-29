@@ -55,5 +55,12 @@ describe('Nominal Parser Unit Tests', () => {
     expect(parseNominal('')).toBe(0);
     expect(parseNominal('abc')).toBe(0);
     expect(parseNominal('-50')).toBe(0);
+    expect(parseNominal('0')).toBe(0);
+  });
+
+  test('handles onboarding initial balance and budget inputs', () => {
+    expect(parseNominal('1.5jt')).toBe(1500000);
+    expect(parseNominal('3.000.000')).toBe(3000000);
+    expect(parseNominal('500rb')).toBe(500000);
   });
 });

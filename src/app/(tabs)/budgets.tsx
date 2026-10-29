@@ -355,7 +355,10 @@ export default function BudgetsScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: spacing.gutter,
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
+    paddingHorizontal: 16,
   },
   periodRow: {
     flexDirection: 'row',

@@ -517,6 +517,9 @@ export default function AddTransactionModal() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
   },
   keyboardAvoider: {
     flex: 1,

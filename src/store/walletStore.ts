@@ -22,6 +22,7 @@ interface WalletState {
       type: WalletType;
       colorKey: string;
       iconKey: string;
+      initialBalance: number;
       includeInTotal: boolean;
       sortOrder: number;
     }>

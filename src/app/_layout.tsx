@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet, AppState, AppStateStatus } from 'react-native';
 import {
@@ -18,6 +18,10 @@ import { useWalletStore } from '../store/walletStore';
 import { useCategoryStore } from '../store/categoryStore';
 import { useTransactionStore } from '../store/transactionStore';
 import { colors } from '../theme/tokens';
+
+export const unstable_settings = {
+  initialRouteName: '(tabs)',
+};
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -58,7 +62,7 @@ export default function RootLayout() {
       }
     }
     init();
-  }, []);
+  }, [refreshSettings, refreshWallets, refreshCategories, refreshTransactions]);
 
   // Handle app switcher & locking on active
   useEffect(() => {
@@ -72,16 +76,36 @@ export default function RootLayout() {
     return () => sub.remove();
   }, [lockApp]);
 
+  const segments = useSegments();
+
   // Handle navigation guard for lock & onboarding
   useEffect(() => {
     if (!dbReady || (!fontsLoaded && !fontError) || settingsLoading) return;
 
+    const inOnboardingGroup = segments[0] === '(onboarding)';
+    const inLockGroup = segments[0] === 'lock';
+
     if (!onboardingCompleted) {
-      router.replace('/(onboarding)');
+      if (!inOnboardingGroup) {
+        router.replace('/(onboarding)');
+      }
     } else if (appLockEnabled && !isUnlocked) {
-      router.replace('/lock');
+      if (!inLockGroup) {
+        router.replace('/lock');
+      }
+    } else if (inOnboardingGroup || inLockGroup) {
+      router.replace('/(tabs)');
     }
-  }, [dbReady, fontsLoaded, fontError, settingsLoading, onboardingCompleted, appLockEnabled, isUnlocked]);
+  }, [
+    dbReady,
+    fontsLoaded,
+    fontError,
+    settingsLoading,
+    onboardingCompleted,
+    appLockEnabled,
+    isUnlocked,
+    segments,
+  ]);
 
   if ((!fontsLoaded && !fontError) || !dbReady || settingsLoading) {
     return (

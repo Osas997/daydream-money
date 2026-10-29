@@ -339,7 +339,10 @@ export default function CalendarScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 20,
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
+    paddingHorizontal: 16,
   },
   header: {
     flexDirection: 'row',

@@ -75,7 +75,7 @@ export default function HomeScreen() {
           styles.scrollContent,
           {
             paddingTop: Math.max(insets.top, 16),
-            paddingBottom: 132,
+            paddingBottom: 110,
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -89,26 +89,38 @@ export default function HomeScreen() {
       >
         {/* Top Header Bar */}
         <View style={styles.headerBar}>
-          <View>
+          <View style={styles.headerTitleWrap}>
             <Text style={typography.labelUppercase}>DAYDREAM MONEY</Text>
-            <Text style={[typography.displayMd, styles.appName]}>Keuangan Tenang</Text>
+            <Text
+              style={[typography.displayMd, styles.appName]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              Keuangan Tenang
+            </Text>
           </View>
           <View style={styles.headerActions}>
             <ButtonIconGlass
               icon="calendar"
               onPress={() => router.push('/calendar')}
+              size={38}
+              iconSize={18}
               style={styles.iconMargin}
               accessibilityLabel="Kalender Transaksi"
             />
             <ButtonIconGlass
               icon="bank"
               onPress={() => router.push('/wallets')}
+              size={38}
+              iconSize={18}
               style={styles.iconMargin}
               accessibilityLabel="Daftar Dompet"
             />
             <ButtonIconGlass
               icon="settings"
               onPress={() => router.push('/settings')}
+              size={38}
+              iconSize={18}
               accessibilityLabel="Pengaturan"
             />
           </View>
@@ -121,7 +133,7 @@ export default function HomeScreen() {
             style={styles.periodNavBtn}
             accessibilityLabel="Bulan sebelumnya"
           >
-            <AppIcon name="chevronLeft" size={20} color={colors.onSurfaceVariant} />
+            <AppIcon name="chevronLeft" size={18} color={colors.onSurfaceVariant} />
           </Pressable>
 
           <Pressable
@@ -130,7 +142,7 @@ export default function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel="Pilih periode dan tanggal"
           >
-            <Text style={[typography.labelMd, styles.periodText]}>
+            <Text style={[typography.labelMd, styles.periodText]} numberOfLines={1}>
               {monthRangeLabel || currentMonth}
             </Text>
             <View style={{ marginLeft: 6 }}>
@@ -143,12 +155,12 @@ export default function HomeScreen() {
             style={styles.periodNavBtn}
             accessibilityLabel="Bulan berikutnya"
           >
-            <AppIcon name="chevronRight" size={20} color={colors.onSurfaceVariant} />
+            <AppIcon name="chevronRight" size={18} color={colors.onSurfaceVariant} />
           </Pressable>
         </View>
 
         {/* Hero Card: Total Saldo */}
-        <GlassCard style={styles.heroCard} padding={22}>
+        <GlassCard style={styles.heroCard} padding={18}>
           <View style={styles.heroTop}>
             <Text style={[typography.labelUppercase, styles.heroEyebrow]}>
               TOTAL SALDO
@@ -161,13 +173,17 @@ export default function HomeScreen() {
             >
               <AppIcon
                 name={hideBalance ? 'eyeOff' : 'eye'}
-                size={20}
+                size={18}
                 color={colors.onSurfaceMuted}
               />
             </Pressable>
           </View>
 
-          <Text style={[typography.displayLg, styles.heroBalance]} numberOfLines={1}>
+          <Text
+            style={[typography.displayLg, styles.heroBalance]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
             {formatCurrency(totalBalance, hideBalance)}
           </Text>
 
@@ -175,11 +191,15 @@ export default function HomeScreen() {
           <View style={styles.flowRow}>
             <View style={styles.flowItem}>
               <View style={[styles.flowIconCircle, { backgroundColor: 'rgba(129, 149, 229, 0.15)' }]}> 
-                <AppIcon name="income" size={18} color={colors.primary} strokeWidth={2} />
+                <AppIcon name="income" size={16} color={colors.primary} strokeWidth={2} />
               </View>
-              <View>
-                <Text style={styles.flowLabel}>Pemasukan</Text>
-                <Text style={[styles.flowAmount, { color: colors.primary }]}> 
+              <View style={styles.flowTextWrap}>
+                <Text style={styles.flowLabel} numberOfLines={1}>Pemasukan</Text>
+                <Text
+                  style={[styles.flowAmount, { color: colors.primary }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                > 
                   {formatCurrency(monthIncome, hideBalance)}
                 </Text>
               </View>
@@ -187,11 +207,15 @@ export default function HomeScreen() {
 
             <View style={styles.flowItem}>
               <View style={[styles.flowIconCircle, { backgroundColor: 'rgba(235, 107, 120, 0.15)' }]}>
-                <AppIcon name="expense" size={18} color={colors.error} strokeWidth={2} />
+                <AppIcon name="expense" size={16} color={colors.error} strokeWidth={2} />
               </View>
-              <View>
-                <Text style={styles.flowLabel}>Pengeluaran</Text>
-                <Text style={[styles.flowAmount, { color: colors.onSurface }]}> 
+              <View style={styles.flowTextWrap}>
+                <Text style={styles.flowLabel} numberOfLines={1}>Pengeluaran</Text>
+                <Text
+                  style={[styles.flowAmount, { color: colors.onSurface }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                > 
                   {formatCurrency(monthExpense, hideBalance)}
                 </Text>
               </View>
@@ -362,53 +386,63 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: 20,
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
+    paddingHorizontal: 16,
   },
   headerBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
+  },
+  headerTitleWrap: {
+    flex: 1,
+    minWidth: 0,
+    marginRight: 8,
   },
   appName: {
     color: colors.onSurface,
     fontFamily: fontFamilies.regular,
-    fontSize: 24,
-    lineHeight: 32,
+    fontSize: 22,
+    lineHeight: 28,
     marginTop: 2,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 0,
   },
   iconMargin: {
-    marginRight: 8,
+    marginRight: 6,
   },
   periodRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 14,
   },
   periodNavBtn: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
   periodCenter: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    maxWidth: '75%',
   },
   periodText: {
     color: colors.onSurface,
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: fontFamilies.semiBold,
   },
   heroCard: {
-    marginBottom: 20,
-    borderRadius: 28,
+    marginBottom: 14,
+    borderRadius: 24,
   },
   heroTop: {
     flexDirection: 'row',
@@ -422,16 +456,16 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.bold,
   },
   eyeBtn: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroBalance: {
-    marginVertical: 20,
-    fontSize: 40,
-    lineHeight: 48,
-    letterSpacing: -1,
+    marginVertical: 10,
+    fontSize: 34,
+    lineHeight: 40,
+    letterSpacing: -0.5,
     fontFamily: fontFamilies.light,
     color: colors.onSurface,
   },
@@ -439,19 +473,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
+    gap: 8,
   },
   flowItem: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    minWidth: 0,
   },
   flowIconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: 8,
+  },
+  flowTextWrap: {
+    flex: 1,
+    minWidth: 0,
   },
   flowLabel: {
     fontSize: 11,
@@ -459,17 +500,18 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.medium,
   },
   flowAmount: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: fontFamilies.bold,
     marginTop: 1,
   },
   quickActionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: 16,
+    gap: 8,
   },
   actionBtnMargin: {
-    marginRight: 10,
+    marginRight: 0,
   },
   budgetPreviewCard: {
     marginBottom: spacing.md,

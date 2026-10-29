@@ -52,9 +52,9 @@ export async function getBudgetsWithSpending(
       startMonth: r.startMonth,
       createdAt: r.createdAt,
       updatedAt: r.updatedAt,
-      categoryName: r.categoryId ? r.categoryName : 'Total Anggaran',
-      categoryIcon: r.categoryId ? r.categoryIcon || 'tag' : 'pieChart',
-      categoryColor: r.categoryId ? r.categoryColor || '#8496E6' : '#8496E6',
+      categoryName: r.categoryId ? (r.categoryName || 'Kategori') : 'Total Anggaran',
+      categoryIcon: r.categoryId ? (r.categoryIcon || 'tag') : 'budget',
+      categoryColor: r.categoryId ? (r.categoryColor || '#8496E6') : '#8496E6',
       spent,
       remaining,
       percentage,
@@ -73,10 +73,10 @@ export async function createOrUpdateBudget(params: {
   const amount = Math.round(params.amount);
   const rollover = params.rollover ? 1 : 0;
 
-  // Check if exists for this category and month
+  // Check if exists for this category and month (using null-safe IS operator)
   const existing = await db.getFirstAsync<{ id: string }>(
-    `SELECT id FROM budgets WHERE ((category_id IS NULL AND ? IS NULL) OR category_id = ?) AND start_month = ?;`,
-    [params.categoryId, params.categoryId, params.startMonth]
+    `SELECT id FROM budgets WHERE category_id IS ? AND start_month = ?;`,
+    [params.categoryId, params.startMonth]
   );
 
   if (existing) {

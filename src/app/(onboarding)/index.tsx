@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,7 +8,8 @@ import { ButtonPrimary } from '../../components/glass/ButtonPrimary';
 import { InputText } from '../../components/glass/InputText';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useWalletStore } from '../../store/walletStore';
-import { colors, radius, spacing } from '../../theme/tokens';
+import { useBudgetStore } from '../../store/budgetStore';
+import { colors, spacing } from '../../theme/tokens';
 import { typography } from '../../theme/typography';
 import { AppIcon } from '../../theme/icons';
 import { parseNominal } from '../../lib/nominalParser';
@@ -18,25 +19,49 @@ export default function OnboardingScreen() {
   const [slide, setSlide] = useState(0);
   const [walletName, setWalletName] = useState('Tunai');
   const [initialBalanceText, setInitialBalanceText] = useState('');
+  const [budgetLimitText, setBudgetLimitText] = useState('');
 
-  const { setOnboardingCompleted } = useSettingsStore();
-  const { wallets, updateWallet, correctBalance } = useWalletStore();
+  const { setOnboardingCompleted, onboardingCompleted, loading: settingsLoading } = useSettingsStore();
+  const { wallets, updateWallet } = useWalletStore();
+  const { saveBudget } = useBudgetStore();
+
+  useEffect(() => {
+    if (!settingsLoading && onboardingCompleted) {
+      router.replace('/(tabs)');
+    }
+  }, [settingsLoading, onboardingCompleted]);
 
   const handleFinish = async () => {
-    const initialBal = parseNominal(initialBalanceText);
+    try {
+      const initialBal = parseNominal(initialBalanceText);
+      const budgetAmount = parseNominal(budgetLimitText);
 
-    const defaultCashWallet = wallets.find((wallet) => wallet.id === 'wallet-default-cash');
-    if (defaultCashWallet && walletName.trim()) {
-      await updateWallet(defaultCashWallet.id, { name: walletName.trim() });
-      // Initial balance is stored on default cash only during first-run setup.
-      // New user state has no transactions yet, therefore correction is exact.
-      if (initialBal > 0) {
-        await correctBalance(defaultCashWallet.id, initialBal, 'Saldo awal onboarding');
+      const targetWallet = wallets.find((w) => w.id === 'wallet-default-cash') || wallets[0];
+      const trimmedName = walletName.trim() || 'Tunai';
+
+      if (targetWallet) {
+        await updateWallet(targetWallet.id, {
+          name: trimmedName,
+          initialBalance: initialBal,
+        });
       }
-    }
 
-    await setOnboardingCompleted(true);
-    router.replace('/(tabs)');
+      if (budgetAmount > 0) {
+        const currentMonth = new Date().toISOString().slice(0, 7);
+        await saveBudget({
+          categoryId: null,
+          amount: budgetAmount,
+          startMonth: currentMonth,
+        });
+      }
+
+      await setOnboardingCompleted(true);
+      router.replace('/(tabs)');
+    } catch (err) {
+      console.error('Error finishing onboarding:', err);
+      await setOnboardingCompleted(true);
+      router.replace('/(tabs)');
+    }
   };
 
   return (
@@ -97,18 +122,18 @@ export default function OnboardingScreen() {
           )}
 
           {slide === 2 && (
-            <GlassCard style={styles.slideCard} padding={spacing.xl}>
+            <GlassCard style={styles.slideCard} padding={spacing.lg}>
               <View style={styles.iconCircle}>
-                <AppIcon name="bank" size={36} color={colors.primary} />
+                <AppIcon name="bank" size={32} color={colors.primary} />
               </View>
               <Text style={[typography.labelUppercase, styles.eyebrow]}>
                 LANGKAH TERAKHIR
               </Text>
               <Text style={[typography.headlineMd, styles.title]}>
-                Siapkan Dompet Pertama
+                Siapkan Dompet & Anggaran
               </Text>
               <Text style={[typography.caption, styles.desc]}>
-                Bisa diubah atau ditambah kapan saja di pengaturan.
+                Atur nama dompet, saldo awal, dan target anggaran bulanan Anda.
               </Text>
 
               <View style={styles.inputArea}>
@@ -119,7 +144,7 @@ export default function OnboardingScreen() {
                   value={walletName}
                   onChangeText={setWalletName}
                   placeholder="Tunai / BCA / GoPay"
-                  containerStyle={{ marginBottom: spacing.sm }}
+                  containerStyle={{ marginBottom: spacing.xs }}
                 />
 
                 <Text style={[typography.caption, styles.fieldLabel]}>
@@ -129,6 +154,17 @@ export default function OnboardingScreen() {
                   value={initialBalanceText}
                   onChangeText={setInitialBalanceText}
                   placeholder="0 atau 1.5jt"
+                  keyboardType="numeric"
+                  containerStyle={{ marginBottom: spacing.xs }}
+                />
+
+                <Text style={[typography.caption, styles.fieldLabel]}>
+                  BATAS ANGGARAN BULAN INI (OPSIONAL)
+                </Text>
+                <InputText
+                  value={budgetLimitText}
+                  onChangeText={setBudgetLimitText}
+                  placeholder="Contoh: 3jt atau 5.000.000"
                   keyboardType="numeric"
                 />
               </View>
@@ -172,7 +208,10 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: spacing.gutter,
+    maxWidth: 520,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: 16,
     justifyContent: 'space-between',
   },
   topBar: {
@@ -190,13 +229,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: 'rgba(132, 150, 230, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   eyebrow: {
     color: colors.primary,

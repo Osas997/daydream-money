@@ -13,7 +13,7 @@ import { colors, radius, spacing } from '../../theme/tokens';
 import { typography } from '../../theme/typography';
 import { parseNominal } from '../../lib/nominalParser';
 
-const WALLET_TYPES: Array<{ type: WalletType; label: string; icon: string }> = [
+const WALLET_TYPES: { type: WalletType; label: string; icon: string }[] = [
   { type: 'cash', label: 'Tunai', icon: 'cash' },
   { type: 'bank', label: 'Bank', icon: 'bank' },
   { type: 'ewallet', label: 'E-Wallet', icon: 'ewallet' },
@@ -182,7 +182,10 @@ export default function AddWalletScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: spacing.gutter,
+    maxWidth: 520,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: 16,
     paddingTop: spacing.md,
   },
   card: {

@@ -47,6 +47,7 @@ import {
   FileSpreadsheet,
   Upload,
   Database,
+  Tag,
   LucideProps,
 } from 'lucide-react-native';
 
@@ -145,6 +146,8 @@ const iconMap: Record<string, React.FC<LucideProps>> = {
   pdf: FileText,
   excel: FileSpreadsheet,
   alert: AlertCircle,
+  tag: Tag,
+  pieChart: PieChart,
 };
 
 export interface AppIconProps extends LucideProps {

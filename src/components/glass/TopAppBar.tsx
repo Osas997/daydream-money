@@ -90,6 +90,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     minHeight: 48,
+    maxWidth: 520,
+    width: '100%',
+    alignSelf: 'center',
   },
   left: {
     width: 44,

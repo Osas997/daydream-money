@@ -186,7 +186,10 @@ export default function WalletsScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: spacing.gutter,
+    maxWidth: 520,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: 16,
     paddingTop: spacing.md,
   },
   totalCard: {

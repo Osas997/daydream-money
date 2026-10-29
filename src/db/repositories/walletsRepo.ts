@@ -130,6 +130,7 @@ export async function updateWallet(
     type: WalletType;
     colorKey: string;
     iconKey: string;
+    initialBalance: number;
     includeInTotal: boolean;
     sortOrder: number;
   }>
@@ -154,6 +155,10 @@ export async function updateWallet(
   if (params.iconKey !== undefined) {
     sets.push('icon_key = ?');
     values.push(params.iconKey);
+  }
+  if (params.initialBalance !== undefined) {
+    sets.push('initial_balance = ?');
+    values.push(Math.round(params.initialBalance));
   }
   if (params.includeInTotal !== undefined) {
     sets.push('include_in_total = ?');

@@ -256,7 +256,10 @@ export default function ReportsScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingHorizontal: spacing.gutter,
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
+    paddingHorizontal: 16,
   },
   modeRow: {
     flexDirection: 'row',

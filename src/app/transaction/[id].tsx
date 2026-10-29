@@ -5,10 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PageGradient } from '../../components/PageGradient';
 import { GlassCard } from '../../components/glass/GlassCard';
 import { TopAppBar } from '../../components/glass/TopAppBar';
-import { ButtonPrimary } from '../../components/glass/ButtonPrimary';
 import { ButtonSecondary } from '../../components/glass/ButtonSecondary';
 import { AppIcon } from '../../theme/icons';
-import { colors, radius, spacing } from '../../theme/tokens';
+import { colors, spacing } from '../../theme/tokens';
 import { typography } from '../../theme/typography';
 import { formatCurrency, formatFullDate, formatTime } from '../../lib/formatters';
 import { useTransactionStore } from '../../store/transactionStore';
@@ -211,7 +210,10 @@ export default function TransactionDetailScreen() {
 
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: spacing.gutter,
+    maxWidth: 520,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: 16,
     paddingTop: spacing.md,
   },
   center: {
