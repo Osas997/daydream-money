@@ -131,13 +131,13 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 
   refreshTransactions: async (startDay = 1) => {
     const { currentMonth, customDateRange, filter } = get();
-    let startDate: string;
-    let endDate: string;
+    let startDate: string | undefined;
+    let endDate: string | undefined;
     let label: string;
 
     if (customDateRange) {
-      startDate = customDateRange.startDate;
-      endDate = customDateRange.endDate;
+      startDate = customDateRange.startDate || undefined;
+      endDate = customDateRange.endDate || undefined;
       label = customDateRange.label;
     } else {
       const range = getFinancialMonthRange(currentMonth, startDay);
@@ -163,14 +163,16 @@ export const useTransactionStore = create<TransactionState>((set, get) => ({
 
       // 2. Recent transactions (latest 10)
       const recentTransactions = await txRepo.getTransactions({
-        startDate: customDateRange ? startDate : undefined,
-        endDate: customDateRange ? endDate : undefined,
+        startDate,
+        endDate,
         limit: 10,
       });
 
       // 3. Filtered transactions for the transactions tab
       const filteredTransactions = await txRepo.getTransactions({
         ...filter,
+        startDate,
+        endDate,
       });
 
       set({

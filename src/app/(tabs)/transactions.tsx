@@ -6,6 +6,7 @@ import {
   SectionList,
   RefreshControl,
   ScrollView,
+  Pressable,
 } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,11 +16,13 @@ import { Chip } from '../../components/glass/Chip';
 import { ListRow } from '../../components/glass/ListRow';
 import { Heading } from '../../components/glass/Heading';
 import { EmptyStateCard } from '../../components/glass/EmptyStateCard';
+import { DateFilterModal } from '../../components/forms/DateFilterModal';
 import { useTransactionStore } from '../../store/transactionStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { Transaction, TransactionType } from '../../db/types';
-import { colors, spacing } from '../../theme/tokens';
-import { typography } from '../../theme/typography';
+import { colors, radius, spacing } from '../../theme/tokens';
+import { typography, fontFamilies } from '../../theme/typography';
+import { AppIcon } from '../../theme/icons';
 import {
   formatCurrency,
   getRelativeDateLabel,
@@ -36,11 +39,19 @@ export default function TransactionsScreen() {
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedType, setSelectedType] = useState<TransactionType | 'all'>('all');
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
 
   const {
     filteredTransactions,
     filter,
     setFilter,
+    currentMonth,
+    monthRangeLabel,
+    customDateRange,
+    setCurrentMonth,
+    setCustomDateRange,
+    nextMonth,
+    prevMonth,
     refreshTransactions,
   } = useTransactionStore();
 
@@ -104,13 +115,55 @@ export default function TransactionsScreen() {
           },
         ]}
       >
-        {/* Header */}
-        <Heading
-          eyebrow="RIWAYAT TRANSAKSI"
-          title="Semua Catatan"
-          variant="headline"
-          style={styles.header}
-        />
+        {/* Header Bar */}
+        <View style={styles.headerRow}>
+          <Heading
+            eyebrow="RIWAYAT TRANSAKSI"
+            title="Catatan Keuangan"
+            variant="headline"
+            style={styles.header}
+          />
+          <Pressable
+            onPress={() => router.push('/calendar')}
+            style={styles.calendarHeaderBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Buka Kalender"
+          >
+            <AppIcon name="calendar" size={18} color={colors.onSurface} />
+          </Pressable>
+        </View>
+
+        {/* Period Selector: prev ← [Month / Filter] → next */}
+        <View style={styles.periodRow}>
+          <Pressable
+            onPress={() => prevMonth(monthStartDay)}
+            style={styles.periodNavBtn}
+            accessibilityLabel="Bulan sebelumnya"
+          >
+            <AppIcon name="chevronLeft" size={18} color={colors.onSurfaceVariant} />
+          </Pressable>
+
+          <Pressable
+            onPress={() => setFilterModalVisible(true)}
+            style={styles.periodCenter}
+            accessibilityRole="button"
+            accessibilityLabel="Pilih periode dan tanggal"
+          >
+            <AppIcon name="calendar" size={13} color={colors.primary} />
+            <Text style={styles.periodText} numberOfLines={1}>
+              {monthRangeLabel || currentMonth}
+            </Text>
+            <AppIcon name="filter" size={12} color={colors.primary} />
+          </Pressable>
+
+          <Pressable
+            onPress={() => nextMonth(monthStartDay)}
+            style={styles.periodNavBtn}
+            accessibilityLabel="Bulan berikutnya"
+          >
+            <AppIcon name="chevronRight" size={18} color={colors.onSurfaceVariant} />
+          </Pressable>
+        </View>
 
         {/* Search Bar */}
         <View style={styles.searchWrap}>
@@ -177,26 +230,29 @@ export default function TransactionsScreen() {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <EmptyStateCard
-                icon={filter.search || selectedType !== 'all' ? 'search' : 'history'}
+                icon={filter.search || selectedType !== 'all' || customDateRange ? 'search' : 'history'}
                 title={
-                  filter.search || selectedType !== 'all'
+                  filter.search || selectedType !== 'all' || customDateRange
                     ? 'Tidak ada transaksi ditemukan'
                     : 'Belum ada transaksi'
                 }
                 subtitle={
-                  filter.search || selectedType !== 'all'
-                    ? 'Coba ubah kata kunci pencarian atau ganti filter yang dipilih.'
+                  filter.search || selectedType !== 'all' || customDateRange
+                    ? 'Coba ubah kata kunci pencarian atau ganti periode filter yang dipilih.'
                     : 'Catat transaksi pemasukan atau pengeluaran pertama Anda sekarang.'
                 }
                 actionLabel={
-                  filter.search || selectedType !== 'all'
+                  filter.search || selectedType !== 'all' || customDateRange
                     ? 'Reset Filter'
                     : 'Tambah Transaksi'
                 }
                 onAction={() => {
-                  if (filter.search || selectedType !== 'all') {
+                  if (filter.search || selectedType !== 'all' || customDateRange) {
                     setSelectedType('all');
                     setFilter({ search: '', type: undefined });
+                    const now = new Date();
+                    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                    setCurrentMonth(ym, monthStartDay);
                   } else {
                     router.push('/add-transaction');
                   }
@@ -260,6 +316,22 @@ export default function TransactionsScreen() {
             }}
           />
       </View>
+
+      {/* Date Filter Modal */}
+      <DateFilterModal
+        visible={filterModalVisible}
+        onClose={() => setFilterModalVisible(false)}
+        currentMonth={currentMonth}
+        monthStartDay={monthStartDay}
+        onSelectMonth={(ym) => setCurrentMonth(ym, monthStartDay)}
+        onSelectDateRange={(range) => setCustomDateRange(range, monthStartDay)}
+        onReset={() => {
+          const now = new Date();
+          const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+          setCurrentMonth(ym, monthStartDay);
+        }}
+        onOpenCalendar={() => router.push('/calendar')}
+      />
     </PageGradient>
   );
 }
@@ -272,18 +344,64 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     paddingHorizontal: 16,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   header: {
-    marginBottom: spacing.sm,
+    marginBottom: 0,
+    flex: 1,
+  },
+  calendarHeaderBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.glass.borderSoft,
+  },
+  periodRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  periodNavBtn: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  periodCenter: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    maxWidth: '75%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.glass.borderSoft,
+    gap: 6,
+  },
+  periodText: {
+    color: colors.onSurface,
+    fontSize: 13,
+    fontFamily: fontFamilies.semiBold,
   },
   searchWrap: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   chipScroll: {
     height: 44,
     maxHeight: 44,
     flexGrow: 0,
     flexShrink: 0,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   chipRow: {
     flexDirection: 'row',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -49,23 +49,60 @@ export default function AddTransactionModal() {
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [isKeypadOpen, setIsKeypadOpen] = useState(true);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const scrollViewRef = useRef<React.ElementRef<typeof ScrollView>>(null);
 
   useEffect(() => {
     if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
       UIManager.setLayoutAnimationEnabledExperimental(true);
     }
-    const showSub = Keyboard.addListener('keyboardDidShow', () => {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setIsKeypadOpen(false);
-    });
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setIsKeyboardVisible(true);
+        setIsKeypadOpen(false);
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 80);
+      }
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setIsKeyboardVisible(false);
+      }
+    );
     return () => {
       showSub.remove();
+      hideSub.remove();
     };
   }, []);
 
   const toggleKeypad = (open?: boolean) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setIsKeypadOpen((prev) => (open !== undefined ? open : !prev));
+    setIsKeypadOpen((prev) => {
+      const next = open !== undefined ? open : !prev;
+      if (next) {
+        Keyboard.dismiss();
+        setIsKeyboardVisible(false);
+      }
+      return next;
+    });
+  };
+
+  const handleNoteFocus = (e: any) => {
+    setIsKeypadOpen(false);
+    setIsKeyboardVisible(true);
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+    if (Platform.OS === 'web' && e?.target?.scrollIntoView) {
+      setTimeout(() => {
+        e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 120);
+    }
   };
 
   const { wallets } = useWalletStore();
@@ -182,6 +219,7 @@ export default function AddTransactionModal() {
     <PageGradient>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
         style={styles.keyboardAvoider}
       >
       <View
@@ -274,8 +312,14 @@ export default function AddTransactionModal() {
 
         {/* Scrollable Form Content */}
         <ScrollView
+          ref={scrollViewRef}
           style={styles.scrollArea}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: isKeyboardVisible ? 160 : 40 },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
           {/* Lavender amount stage with centered raised amount card. */}
@@ -437,7 +481,12 @@ export default function AddTransactionModal() {
               placeholder="Catatan transaksi (opsional)..."
               value={note}
               onChangeText={setNote}
-              onFocus={() => toggleKeypad(false)}
+              onFocus={handleNoteFocus}
+              onBlur={() => setIsKeyboardVisible(false)}
+              returnKeyType="done"
+              onSubmitEditing={() => Keyboard.dismiss()}
+              rightIcon={note.length > 0 ? 'close' : undefined}
+              onRightIconPress={() => setNote('')}
             />
           </View>
         </ScrollView>

@@ -58,7 +58,17 @@ export function DateFilterModal({
   const [endMonth, setEndMonth] = useState(now.getMonth() + 1);
   const [endDay, setEndDay] = useState(now.getDate());
 
-  const handleApplyPreset = (type: 'today' | '7days' | '30days' | 'thisMonth' | 'lastMonth') => {
+  const handleApplyPreset = (type: 'allTime' | 'today' | '7days' | '30days' | 'thisMonth' | 'lastMonth') => {
+    if (type === 'allTime') {
+      onSelectDateRange({
+        startDate: '',
+        endDate: '',
+        label: 'Semua Waktu',
+      });
+      onClose();
+      return;
+    }
+
     const today = new Date();
     const todayEndStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}T23:59:59.999Z`;
 
@@ -212,6 +222,14 @@ export function DateFilterModal({
             {/* Mode 1: Presets */}
             {tabMode === 'preset' && (
               <View style={styles.presetSection}>
+                <Pressable
+                  style={styles.presetItem}
+                  onPress={() => handleApplyPreset('allTime')}
+                >
+                  <AppIcon name="history" size={18} color={colors.primary} />
+                  <Text style={styles.presetText}>Semua Waktu</Text>
+                  <AppIcon name="chevronRight" size={16} color={colors.onSurfaceMuted} />
+                </Pressable>
                 <Pressable
                   style={styles.presetItem}
                   onPress={() => handleApplyPreset('thisMonth')}
