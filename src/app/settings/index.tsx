@@ -1,18 +1,17 @@
 import React, { useState } from 'react';
 import {
   ScrollView,
-  View,
   Text,
   StyleSheet,
   Switch,
   Alert,
-  Modal,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PageGradient } from '../../components/PageGradient';
 import { TopAppBar } from '../../components/glass/TopAppBar';
 import { GlassCard } from '../../components/glass/GlassCard';
+import { KeyboardAwareModal } from '../../components/glass/KeyboardAwareModal';
 import { ListRow } from '../../components/glass/ListRow';
 import { InputText } from '../../components/glass/InputText';
 import { ButtonPrimary } from '../../components/glass/ButtonPrimary';
@@ -378,45 +377,41 @@ export default function SettingsScreen() {
       </ScrollView>
 
       {/* Set PIN Modal */}
-      <Modal
+      <KeyboardAwareModal
         visible={pinModalVisible}
-        transparent
-        animationType="slide"
         onRequestClose={() => setPinModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <GlassCard style={styles.modalCard} padding={spacing.lg}>
-            <Text style={[typography.headlineSm, styles.modalTitle]}>
-              Buat PIN Keamanan (6 Digit)
-            </Text>
-            <Text style={[typography.caption, styles.modalDesc]}>
-              PIN ini akan diminta setiap kali aplikasi dibuka.
-            </Text>
+        <GlassCard style={styles.modalCard} padding={spacing.lg}>
+          <Text style={[typography.headlineSm, styles.modalTitle]}>
+            Buat PIN Keamanan (6 Digit)
+          </Text>
+          <Text style={[typography.caption, styles.modalDesc]}>
+            PIN ini akan diminta setiap kali aplikasi dibuka.
+          </Text>
 
-            <InputText
-              placeholder="Masukkan 6 angka PIN"
-              value={newPin}
-              onChangeText={setNewPin}
-              keyboardType="numeric"
-              maxLength={6}
-              secureTextEntry
-              containerStyle={{ marginTop: spacing.md, marginBottom: spacing.sm }}
-            />
+          <InputText
+            placeholder="Masukkan 6 angka PIN"
+            value={newPin}
+            onChangeText={setNewPin}
+            keyboardType="numeric"
+            maxLength={6}
+            secureTextEntry
+            containerStyle={{ marginTop: spacing.md, marginBottom: spacing.sm }}
+          />
 
-            <InputText
-              placeholder="Konfirmasi 6 angka PIN"
-              value={confirmPin}
-              onChangeText={setConfirmPin}
-              keyboardType="numeric"
-              maxLength={6}
-              secureTextEntry
-              containerStyle={{ marginBottom: spacing.md }}
-            />
+          <InputText
+            placeholder="Konfirmasi 6 angka PIN"
+            value={confirmPin}
+            onChangeText={setConfirmPin}
+            keyboardType="numeric"
+            maxLength={6}
+            secureTextEntry
+            containerStyle={{ marginBottom: spacing.md }}
+          />
 
-            <ButtonPrimary label="Simpan PIN" onPress={handleSavePin} />
-          </GlassCard>
-        </View>
-      </Modal>
+          <ButtonPrimary label="Simpan PIN" onPress={handleSavePin} />
+        </GlassCard>
+      </KeyboardAwareModal>
     </PageGradient>
   );
 }
@@ -447,12 +442,6 @@ const styles = StyleSheet.create({
   },
   aboutDesc: {
     color: colors.onSurfaceVariant,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-    padding: spacing.sm,
   },
   modalCard: {
     borderRadius: radius.xl,

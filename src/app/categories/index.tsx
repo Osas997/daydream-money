@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  Modal,
   Alert,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -13,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PageGradient } from '../../components/PageGradient';
 import { TopAppBar } from '../../components/glass/TopAppBar';
 import { GlassCard } from '../../components/glass/GlassCard';
+import { KeyboardAwareModal } from '../../components/glass/KeyboardAwareModal';
 import { ListRow } from '../../components/glass/ListRow';
 import { Chip } from '../../components/glass/Chip';
 import { InputText } from '../../components/glass/InputText';
@@ -149,58 +149,54 @@ export default function CategoriesScreen() {
       </ScrollView>
 
       {/* Add Category Modal */}
-      <Modal
+      <KeyboardAwareModal
         visible={modalVisible}
-        transparent
-        animationType="slide"
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <GlassCard style={styles.modalCard} padding={spacing.lg}>
-            <View style={styles.modalHeader}>
-              <Text style={[typography.headlineSm, styles.modalTitle]}>
-                Tambah Kategori
-              </Text>
-              <Pressable onPress={() => setModalVisible(false)}>
-                <AppIcon name="close" size={22} color={colors.onSurface} />
-              </Pressable>
-            </View>
-
-            <Text style={[typography.caption, styles.modalLabel]}>
-              NAMA KATEGORI
+        <GlassCard style={styles.modalCard} padding={spacing.lg}>
+          <View style={styles.modalHeader}>
+            <Text style={[typography.headlineSm, styles.modalTitle]}>
+              Tambah Kategori
             </Text>
-            <InputText
-              placeholder="Contoh: Kopi & Nongkrong..."
-              value={newCatName}
-              onChangeText={setNewCatName}
-              containerStyle={{ marginBottom: spacing.md }}
-            />
+            <Pressable onPress={() => setModalVisible(false)}>
+              <AppIcon name="close" size={22} color={colors.onSurface} />
+            </Pressable>
+          </View>
 
-            <Text style={[typography.caption, styles.modalLabel]}>
-              PILIH WARNA
-            </Text>
-            <View style={styles.colorGrid}>
-              {PRESET_COLORS.map((c) => (
-                <Pressable
-                  key={c}
-                  onPress={() => setSelectedColor(c)}
-                  style={[
-                    styles.colorDot,
-                    { backgroundColor: c },
-                    selectedColor === c && styles.colorDotActive,
-                  ]}
-                />
-              ))}
-            </View>
+          <Text style={[typography.caption, styles.modalLabel]}>
+            NAMA KATEGORI
+          </Text>
+          <InputText
+            placeholder="Contoh: Kopi & Nongkrong..."
+            value={newCatName}
+            onChangeText={setNewCatName}
+            containerStyle={{ marginBottom: spacing.md }}
+          />
 
-            <ButtonPrimary
-              label="Simpan Kategori"
-              onPress={handleAddCategory}
-              style={{ marginTop: spacing.md }}
-            />
-          </GlassCard>
-        </View>
-      </Modal>
+          <Text style={[typography.caption, styles.modalLabel]}>
+            PILIH WARNA
+          </Text>
+          <View style={styles.colorGrid}>
+            {PRESET_COLORS.map((c) => (
+              <Pressable
+                key={c}
+                onPress={() => setSelectedColor(c)}
+                style={[
+                  styles.colorDot,
+                  { backgroundColor: c },
+                  selectedColor === c && styles.colorDotActive,
+                ]}
+              />
+            ))}
+          </View>
+
+          <ButtonPrimary
+            label="Simpan Kategori"
+            onPress={handleAddCategory}
+            style={{ marginTop: spacing.md }}
+          />
+        </GlassCard>
+      </KeyboardAwareModal>
     </PageGradient>
   );
 }
@@ -229,12 +225,6 @@ const styles = StyleSheet.create({
   },
   addBtn: {
     marginTop: spacing.md,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-    padding: spacing.sm,
   },
   modalCard: {
     borderRadius: radius.xl,

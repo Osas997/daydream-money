@@ -10,6 +10,7 @@ import {
   Platform,
   Keyboard,
   LayoutAnimation,
+  TextInput,
   UIManager,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -29,6 +30,7 @@ import { TransactionType } from '../db/types';
 import { colors, radius } from '../theme/tokens';
 import { typography, fontFamilies } from '../theme/typography';
 import { AppIcon } from '../theme/icons';
+import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import { parseNominal } from '../lib/nominalParser';
 import { formatCurrency, formatDateLabel, isToday, isYesterday } from '../lib/formatters';
 
@@ -49,8 +51,9 @@ export default function AddTransactionModal() {
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [isKeypadOpen, setIsKeypadOpen] = useState(true);
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const keyboardHeight = useKeyboardHeight();
   const scrollViewRef = useRef<React.ElementRef<typeof ScrollView>>(null);
+  const scrollOffsetRef = useRef(0);
 
   useEffect(() => {
     if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -59,23 +62,58 @@ export default function AddTransactionModal() {
     const showSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       () => {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setIsKeyboardVisible(true);
+        // Collapse instantly: animating the layout here would also animate the
+        // keyboard padding, which delays the final viewport past the scroll.
         setIsKeypadOpen(false);
-        setTimeout(() => {
-          scrollViewRef.current?.scrollToEnd({ animated: true });
-        }, 80);
       }
     );
+
+    // Scroll only after the keyboard has finished animating. On iOS a scroll
+    // started on `keyboardWillShow` is clamped by the still tall viewport, so
+    // the note field ends up behind the keyboard once the animation is done.
+    // Measure the focused field instead of blindly scrolling to the end so the
+    // note keeps a comfortable margin above the keyboard ("not too low") and
+    // the form is not pushed further up than necessary ("not too high").
+    const didShowSub = Keyboard.addListener('keyboardDidShow', () => {
+      setTimeout(() => {
+        const scrollView = scrollViewRef.current;
+        const focusedInput = TextInput.State.currentlyFocusedInput();
+        if (
+          !scrollView ||
+          !focusedInput ||
+          typeof focusedInput.measureInWindow !== 'function'
+        ) {
+          return;
+        }
+
+        scrollView.measureInWindow((_x, viewportY, _w, viewportHeight) => {
+          focusedInput.measureInWindow(
+            (_inputX, inputY, _inputWidth, inputHeight) => {
+              const keyboardMargin = 24;
+              const overflow =
+                inputY + inputHeight + keyboardMargin - (viewportY + viewportHeight);
+
+              if (overflow > 0) {
+                scrollView.scrollTo({
+                  y: scrollOffsetRef.current + overflow,
+                  animated: true,
+                });
+              }
+            }
+          );
+        });
+      }, 150);
+    });
+
     const hideSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
       () => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setIsKeyboardVisible(false);
       }
     );
     return () => {
       showSub.remove();
+      didShowSub.remove();
       hideSub.remove();
     };
   }, []);
@@ -86,7 +124,6 @@ export default function AddTransactionModal() {
       const next = open !== undefined ? open : !prev;
       if (next) {
         Keyboard.dismiss();
-        setIsKeyboardVisible(false);
       }
       return next;
     });
@@ -94,10 +131,6 @@ export default function AddTransactionModal() {
 
   const handleNoteFocus = (e: any) => {
     setIsKeypadOpen(false);
-    setIsKeyboardVisible(true);
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
     if (Platform.OS === 'web' && e?.target?.scrollIntoView) {
       setTimeout(() => {
         e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -227,7 +260,13 @@ export default function AddTransactionModal() {
           styles.container,
           {
             paddingTop: Math.max(insets.top, 16),
-            paddingBottom: Math.max(insets.bottom, 16),
+            // Android edge-to-edge does not resize the window for the IME, so
+            // lift the whole screen (scroll area + bottom bar) above it.
+            // iOS is already handled by the KeyboardAvoidingView above.
+            paddingBottom:
+              Platform.OS === 'android' && keyboardHeight > 0
+                ? keyboardHeight
+                : Math.max(insets.bottom, 16),
           },
         ]}
       >
@@ -314,13 +353,14 @@ export default function AddTransactionModal() {
         <ScrollView
           ref={scrollViewRef}
           style={styles.scrollArea}
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingBottom: isKeyboardVisible ? 160 : 40 },
-          ]}
+          contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
+          onScroll={(event) => {
+            scrollOffsetRef.current = event.nativeEvent.contentOffset.y;
+          }}
+          scrollEventThrottle={16}
         >
           {/* Lavender amount stage with centered raised amount card. */}
           <View style={styles.amountStage}>
@@ -482,7 +522,6 @@ export default function AddTransactionModal() {
               value={note}
               onChangeText={setNote}
               onFocus={handleNoteFocus}
-              onBlur={() => setIsKeyboardVisible(false)}
               returnKeyType="done"
               onSubmitEditing={() => Keyboard.dismiss()}
               rightIcon={note.length > 0 ? 'close' : undefined}
@@ -616,7 +655,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: 24,
   },
   amountStage: {
     backgroundColor: '#DFE5F8',

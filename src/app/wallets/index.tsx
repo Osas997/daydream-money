@@ -5,7 +5,6 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  Modal,
   Alert,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -13,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PageGradient } from '../../components/PageGradient';
 import { TopAppBar } from '../../components/glass/TopAppBar';
 import { GlassCard } from '../../components/glass/GlassCard';
+import { KeyboardAwareModal } from '../../components/glass/KeyboardAwareModal';
 import { ListRow } from '../../components/glass/ListRow';
 import { ButtonPrimary } from '../../components/glass/ButtonPrimary';
 import { InputText } from '../../components/glass/InputText';
@@ -144,42 +144,38 @@ export default function WalletsScreen() {
       </ScrollView>
 
       {/* Balance Correction Modal */}
-      <Modal
+      <KeyboardAwareModal
         visible={adjustModalVisible}
-        transparent
-        animationType="slide"
         onRequestClose={() => setAdjustModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <GlassCard style={styles.modalCard} padding={spacing.lg}>
-            <View style={styles.modalHeader}>
-              <Text style={[typography.headlineSm, styles.modalTitle]}>
-                Koreksi Saldo Dompet
-              </Text>
-              <Pressable onPress={() => setAdjustModalVisible(false)}>
-                <AppIcon name="close" size={22} color={colors.onSurface} />
-              </Pressable>
-            </View>
-
-            <Text style={[typography.caption, styles.modalSubtitle]}>
-              Masukkan saldo riil saat ini. Sistem akan otomatis mencatat selisihnya sebagai transaksi penyesuaian.
+        <GlassCard style={styles.modalCard} padding={spacing.lg}>
+          <View style={styles.modalHeader}>
+            <Text style={[typography.headlineSm, styles.modalTitle]}>
+              Koreksi Saldo Dompet
             </Text>
+            <Pressable onPress={() => setAdjustModalVisible(false)}>
+              <AppIcon name="close" size={22} color={colors.onSurface} />
+            </Pressable>
+          </View>
 
-            <InputText
-              placeholder="Contoh: 500.000 atau 500k"
-              value={targetBalanceText}
-              onChangeText={setTargetBalanceText}
-              keyboardType="numeric"
-              containerStyle={{ marginVertical: spacing.md }}
-            />
+          <Text style={[typography.caption, styles.modalSubtitle]}>
+            Masukkan saldo riil saat ini. Sistem akan otomatis mencatat selisihnya sebagai transaksi penyesuaian.
+          </Text>
 
-            <ButtonPrimary
-              label="Perbarui Saldo"
-              onPress={handleSaveCorrection}
-            />
-          </GlassCard>
-        </View>
-      </Modal>
+          <InputText
+            placeholder="Contoh: 500.000 atau 500k"
+            value={targetBalanceText}
+            onChangeText={setTargetBalanceText}
+            keyboardType="numeric"
+            containerStyle={{ marginVertical: spacing.md }}
+          />
+
+          <ButtonPrimary
+            label="Perbarui Saldo"
+            onPress={handleSaveCorrection}
+          />
+        </GlassCard>
+      </KeyboardAwareModal>
     </PageGradient>
   );
 }
@@ -232,12 +228,6 @@ const styles = StyleSheet.create({
   },
   addBtn: {
     marginTop: spacing.sm,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-    padding: spacing.sm,
   },
   modalCard: {
     borderRadius: radius.xl,
