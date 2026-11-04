@@ -12,6 +12,7 @@ import { GlassCard } from '../../components/glass/GlassCard';
 import { KeyboardAwareScrollView } from '../../components/glass/KeyboardAwareScrollView';
 import { ButtonPrimary } from '../../components/glass/ButtonPrimary';
 import { InputText } from '../../components/glass/InputText';
+import { MoneyInput } from '../../components/glass/MoneyInput';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useWalletStore } from '../../store/walletStore';
 import { useBudgetStore } from '../../store/budgetStore';
@@ -161,22 +162,20 @@ export default function OnboardingScreen() {
                 <Text style={[typography.caption, styles.fieldLabel]}>
                   SALDO AWAL (OPSIONAL)
                 </Text>
-                <InputText
+                <MoneyInput
                   value={initialBalanceText}
                   onChangeText={setInitialBalanceText}
                   placeholder="0 atau 1.5jt"
-                  keyboardType="numeric"
                   containerStyle={{ marginBottom: spacing.md }}
                 />
 
                 <Text style={[typography.caption, styles.fieldLabel]}>
                   BATAS ANGGARAN BULAN INI (OPSIONAL)
                 </Text>
-                <InputText
+                <MoneyInput
                   value={budgetLimitText}
                   onChangeText={setBudgetLimitText}
                   placeholder="Contoh: 3jt atau 5.000.000"
-                  keyboardType="numeric"
                   containerStyle={{ marginBottom: spacing.md }}
                 />
               </View>

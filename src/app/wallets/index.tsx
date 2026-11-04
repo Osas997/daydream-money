@@ -15,7 +15,7 @@ import { GlassCard } from '../../components/glass/GlassCard';
 import { KeyboardAwareModal } from '../../components/glass/KeyboardAwareModal';
 import { ListRow } from '../../components/glass/ListRow';
 import { ButtonPrimary } from '../../components/glass/ButtonPrimary';
-import { InputText } from '../../components/glass/InputText';
+import { MoneyInput } from '../../components/glass/MoneyInput';
 import { useWalletStore } from '../../store/walletStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { colors, radius, spacing } from '../../theme/tokens';
@@ -162,11 +162,10 @@ export default function WalletsScreen() {
             Masukkan saldo riil saat ini. Sistem akan otomatis mencatat selisihnya sebagai transaksi penyesuaian.
           </Text>
 
-          <InputText
+          <MoneyInput
             placeholder="Contoh: 500.000 atau 500k"
             value={targetBalanceText}
             onChangeText={setTargetBalanceText}
-            keyboardType="numeric"
             containerStyle={{ marginVertical: spacing.md }}
           />
 

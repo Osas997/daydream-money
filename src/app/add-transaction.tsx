@@ -34,7 +34,7 @@ import { typography, fontFamilies } from '../theme/typography';
 import { AppIcon } from '../theme/icons';
 import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import { parseNominal } from '../lib/nominalParser';
-import { formatCurrency, formatDateLabel, isToday, isYesterday } from '../lib/formatters';
+import { formatCurrency, formatDateLabel, isToday, isYesterday, formatMoneyInput } from '../lib/formatters';
 
 export default function AddTransactionModal() {
   const insets = useSafeAreaInsets();
@@ -492,7 +492,7 @@ export default function AddTransactionModal() {
               </Text>
               {nominalRaw ? (
                 <Text style={styles.rawHelper}>
-                  Input: {nominalRaw}
+                  Input: {formatMoneyInput(nominalRaw)}
                 </Text>
               ) : (
                 <Text style={styles.rawPlaceholder}>

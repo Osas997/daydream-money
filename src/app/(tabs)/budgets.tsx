@@ -17,7 +17,7 @@ import { EmptyStateCard } from '../../components/glass/EmptyStateCard';
 import { Heading } from '../../components/glass/Heading';
 import { ButtonPrimary } from '../../components/glass/ButtonPrimary';
 import { ButtonIconGlass } from '../../components/glass/ButtonIconGlass';
-import { InputText } from '../../components/glass/InputText';
+import { MoneyInput } from '../../components/glass/MoneyInput';
 import { CategoryPickerHorizontal } from '../../components/forms/CategoryPickerHorizontal';
 import { useBudgetStore } from '../../store/budgetStore';
 import { useCategoryStore } from '../../store/categoryStore';
@@ -326,11 +326,10 @@ export default function BudgetsScreen() {
           <Text style={[typography.caption, styles.modalLabel, { marginTop: spacing.md }]}>
             NOMINAL BATAS (Rp)
           </Text>
-          <InputText
+          <MoneyInput
             placeholder="Contoh: 1.500.000 atau 1.5jt"
             value={budgetLimitText}
             onChangeText={setBudgetLimitText}
-            keyboardType="numeric"
           />
 
           <ButtonPrimary
