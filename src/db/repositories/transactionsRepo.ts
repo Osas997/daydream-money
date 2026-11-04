@@ -204,6 +204,7 @@ export async function createTransaction(params: {
 export async function updateTransaction(
   id: string,
   params: Partial<{
+    type: TransactionType;
     amount: number;
     walletId: string;
     toWalletId: string | null;
@@ -217,7 +218,27 @@ export async function updateTransaction(
   const sets: string[] = ['updated_at = ?'];
   const values: any[] = [now];
 
+  if (params.type !== undefined) {
+    sets.push('type = ?');
+    values.push(params.type);
+
+    if (params.type === 'transfer') {
+      // A transfer never belongs to a category and always needs a group id
+      // so it stays paired with its destination side.
+      sets.push('category_id = NULL');
+      sets.push('transfer_group_id = COALESCE(transfer_group_id, ?)');
+      values.push('tg_' + Date.now());
+    } else {
+      // Leaving transfer mode drops the destination wallet & pairing id.
+      sets.push('to_wallet_id = NULL');
+      sets.push('transfer_group_id = NULL');
+    }
+  }
+
   if (params.amount !== undefined) {
+    if (params.amount <= 0) {
+      throw new Error('Nominal transaksi harus lebih dari 0');
+    }
     sets.push('amount = ?');
     values.push(Math.round(params.amount));
   }

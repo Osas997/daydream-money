@@ -12,6 +12,7 @@ import {
   LayoutAnimation,
   TextInput,
   UIManager,
+  ActivityIndicator,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,6 +28,7 @@ import { useWalletStore } from '../store/walletStore';
 import { useCategoryStore } from '../store/categoryStore';
 import { useTransactionStore } from '../store/transactionStore';
 import { TransactionType } from '../db/types';
+import * as txRepo from '../db/repositories/transactionsRepo';
 import { colors, radius } from '../theme/tokens';
 import { typography, fontFamilies } from '../theme/typography';
 import { AppIcon } from '../theme/icons';
@@ -37,6 +39,8 @@ import { formatCurrency, formatDateLabel, isToday, isYesterday } from '../lib/fo
 export default function AddTransactionModal() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ type?: string; editId?: string }>();
+  const editId = params.editId;
+  const isEditing = Boolean(editId);
 
   const initialType: TransactionType =
     params.type === 'income'
@@ -140,7 +144,7 @@ export default function AddTransactionModal() {
 
   const { wallets } = useWalletStore();
   const { expenseCategories, incomeCategories } = useCategoryStore();
-  const { createTransaction } = useTransactionStore();
+  const { createTransaction, updateTransaction } = useTransactionStore();
 
   const [selectedWalletId, setSelectedWalletId] = useState<string | null>(
     wallets[0]?.id || null
@@ -155,6 +159,70 @@ export default function AddTransactionModal() {
   );
 
   const [loading, setLoading] = useState(false);
+  const [isLoadingEdit, setIsLoadingEdit] = useState(isEditing);
+  const originalTimeRef = useRef<{
+    hours: number;
+    minutes: number;
+    seconds: number;
+    milliseconds: number;
+  } | null>(null);
+
+  // Hydrate the form with an existing transaction when opened in edit mode.
+  useEffect(() => {
+    if (!editId) return;
+    let cancelled = false;
+
+    async function loadTransactionToEdit() {
+      try {
+        const tx = await txRepo.getTransactionById(editId!);
+        if (cancelled) return;
+
+        if (!tx) {
+          Alert.alert(
+            'Transaksi Tidak Ditemukan',
+            'Data transaksi ini sudah tidak tersedia.'
+          );
+          router.back();
+          return;
+        }
+
+        const occurredDate = new Date(tx.occurredAt);
+        originalTimeRef.current = {
+          hours: occurredDate.getHours(),
+          minutes: occurredDate.getMinutes(),
+          seconds: occurredDate.getSeconds(),
+          milliseconds: occurredDate.getMilliseconds(),
+        };
+
+        setTxType(tx.type);
+        setNominalRaw(String(tx.amount));
+        setNote(tx.note ?? '');
+        setSelectedDate(occurredDate);
+        setSelectedWalletId(tx.walletId);
+        setToWalletId(
+          tx.toWalletId ??
+            useWalletStore
+              .getState()
+              .wallets.find((wallet) => wallet.id !== tx.walletId)?.id ??
+            null
+        );
+        setSelectedCategoryId(tx.categoryId ?? null);
+      } catch (e) {
+        console.error('Error loading transaction for edit:', e);
+        if (!cancelled) {
+          Alert.alert('Gagal Memuat', 'Terjadi kesalahan saat memuat transaksi.');
+          router.back();
+        }
+      } finally {
+        if (!cancelled) setIsLoadingEdit(false);
+      }
+    }
+
+    loadTransactionToEdit();
+    return () => {
+      cancelled = true;
+    };
+  }, [editId]);
 
   // Keypad operations
   const handleDigitPress = (digit: string) => {
@@ -220,10 +288,17 @@ export default function AddTransactionModal() {
     setLoading(true);
     try {
       const txDate = new Date(selectedDate);
-      const now = new Date();
-      txDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+      if (isEditing && originalTimeRef.current) {
+        // Keep the original clock time so editing other fields does not
+        // silently change when the transaction happened.
+        const { hours, minutes, seconds, milliseconds } = originalTimeRef.current;
+        txDate.setHours(hours, minutes, seconds, milliseconds);
+      } else {
+        const now = new Date();
+        txDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+      }
 
-      await createTransaction({
+      const payload = {
         type: txType,
         amount: parsedAmount,
         walletId: selectedWalletId,
@@ -231,11 +306,20 @@ export default function AddTransactionModal() {
         categoryId: txType === 'transfer' ? null : selectedCategoryId,
         note: note.trim() || null,
         occurredAt: txDate.toISOString(),
-      });
+      };
+
+      if (isEditing && editId) {
+        await updateTransaction(editId, payload);
+      } else {
+        await createTransaction(payload);
+      }
 
       router.back();
     } catch (e: any) {
-      Alert.alert('Gagal Menyimpan', e.message || 'Terjadi kesalahan saat menyimpan');
+      Alert.alert(
+        isEditing ? 'Gagal Memperbarui' : 'Gagal Menyimpan',
+        e.message || 'Terjadi kesalahan saat menyimpan'
+      );
     } finally {
       setLoading(false);
     }
@@ -247,6 +331,23 @@ export default function AddTransactionModal() {
       setToWalletId(wallets.find((wallet) => wallet.id !== walletId)?.id ?? null);
     }
   };
+
+  if (isEditing && isLoadingEdit) {
+    return (
+      <PageGradient>
+        <View
+          style={[
+            styles.container,
+            styles.loadingContainer,
+            { paddingTop: Math.max(insets.top, 16) },
+          ]}
+        >
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Memuat transaksi...</Text>
+        </View>
+      </PageGradient>
+    );
+  }
 
   return (
     <PageGradient>
@@ -280,7 +381,9 @@ export default function AddTransactionModal() {
             accessibilityLabel="Tutup"
           />
           <Text style={styles.headerTitle}>
-            {txType === 'expense'
+            {isEditing
+              ? 'Edit Transaksi'
+              : txType === 'expense'
               ? 'Catat Pengeluaran'
               : txType === 'income'
               ? 'Catat Pemasukan'
@@ -556,7 +659,7 @@ export default function AddTransactionModal() {
 
               <View style={styles.keypadSaveWrap}>
                 <ButtonPrimary
-                  label="Simpan Transaksi"
+                  label={isEditing ? 'Simpan Perubahan' : 'Simpan Transaksi'}
                   icon="check"
                   onPress={handleSave}
                   loading={loading}
@@ -580,7 +683,7 @@ export default function AddTransactionModal() {
 
               <View style={{ flex: 1, marginLeft: 10 }}>
                 <ButtonPrimary
-                  label="Simpan Transaksi"
+                  label={isEditing ? 'Simpan Perubahan' : 'Simpan Transaksi'}
                   icon="check"
                   onPress={handleSave}
                   loading={loading}
@@ -611,6 +714,17 @@ const styles = StyleSheet.create({
   },
   keyboardAvoider: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    fontFamily: fontFamilies.medium,
+    color: colors.onSurfaceVariant,
   },
   header: {
     flexDirection: 'row',

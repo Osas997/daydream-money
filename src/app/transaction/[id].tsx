@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, Alert, ScrollView, Pressable } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { PageGradient } from '../../components/PageGradient';
@@ -22,20 +22,33 @@ export default function TransactionDetailScreen() {
 
   const { deleteTransaction } = useTransactionStore();
 
-  useEffect(() => {
-    async function load() {
-      if (!id) return;
-      try {
-        const tx = await txRepo.getTransactionById(id);
-        setTransaction(tx);
-      } catch (e) {
-        console.error('Error loading transaction:', e);
-      } finally {
-        setLoading(false);
-      }
+  const loadTransaction = useCallback(async () => {
+    if (!id) {
+      setLoading(false);
+      return;
     }
-    load();
+    try {
+      const tx = await txRepo.getTransactionById(id);
+      setTransaction(tx);
+    } catch (e) {
+      console.error('Error loading transaction:', e);
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
+
+  // Reload when the screen regains focus so edits made in the modal show up.
+  useFocusEffect(
+    useCallback(() => {
+      loadTransaction();
+    }, [loadTransaction])
+  );
+
+  const handleEdit = () => {
+    if (!id) return;
+    Haptics.selectionAsync().catch(() => {});
+    router.push({ pathname: '/add-transaction', params: { editId: id } });
+  };
 
   const handleDelete = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -58,7 +71,7 @@ export default function TransactionDetailScreen() {
     );
   };
 
-  if (loading || !transaction) {
+  if (loading) {
     return (
       <PageGradient>
         <TopAppBar
@@ -68,6 +81,21 @@ export default function TransactionDetailScreen() {
         />
         <View style={styles.center}>
           <Text style={typography.bodyMd}>Memuat data...</Text>
+        </View>
+      </PageGradient>
+    );
+  }
+
+  if (!transaction) {
+    return (
+      <PageGradient>
+        <TopAppBar
+          leftIcon="chevronLeft"
+          onLeftPress={() => router.back()}
+          title="Detail Transaksi"
+        />
+        <View style={styles.center}>
+          <Text style={typography.bodyMd}>Transaksi tidak ditemukan.</Text>
         </View>
       </PageGradient>
     );
@@ -83,8 +111,8 @@ export default function TransactionDetailScreen() {
         leftIcon="chevronLeft"
         onLeftPress={() => router.back()}
         title="Detail Transaksi"
-        rightIcon="trash"
-        onRightPress={handleDelete}
+        rightIcon="edit"
+        onRightPress={handleEdit}
       />
 
       <ScrollView
@@ -234,11 +262,26 @@ export default function TransactionDetailScreen() {
           )}
         </GlassCard>
 
-        {/* Delete Action Button */}
+        {/* Action Buttons */}
         <View style={styles.actionRow}>
+          <Pressable
+            onPress={handleEdit}
+            style={({ pressed }) => [
+              styles.actionButton,
+              styles.editButton,
+              pressed && styles.editButtonPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Edit Transaksi"
+          >
+            <AppIcon name="edit" size={18} color={colors.primary} strokeWidth={2} />
+            <Text style={styles.editButtonText}>Edit Transaksi</Text>
+          </Pressable>
+
           <Pressable
             onPress={handleDelete}
             style={({ pressed }) => [
+              styles.actionButton,
               styles.deleteButton,
               pressed && styles.deleteButtonPressed,
             ]}
@@ -246,7 +289,7 @@ export default function TransactionDetailScreen() {
             accessibilityLabel="Hapus Transaksi"
           >
             <AppIcon name="trash" size={18} color={colors.error} strokeWidth={2} />
-            <Text style={styles.deleteButtonText}>Hapus Transaksi</Text>
+            <Text style={styles.deleteButtonText}>Hapus</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -345,18 +388,36 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     marginTop: spacing.xs,
+    flexDirection: 'row',
+    gap: 10,
   },
-  deleteButton: {
+  actionButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(235, 107, 120, 0.08)',
     borderWidth: 1,
-    borderColor: 'rgba(235, 107, 120, 0.25)',
     gap: 8,
+  },
+  editButton: {
+    backgroundColor: 'rgba(129, 149, 229, 0.1)',
+    borderColor: 'rgba(129, 149, 229, 0.3)',
+  },
+  editButtonPressed: {
+    opacity: 0.75,
+    backgroundColor: 'rgba(129, 149, 229, 0.18)',
+  },
+  editButtonText: {
+    fontSize: 14,
+    fontFamily: fontFamilies.semiBold,
+    color: colors.primary,
+  },
+  deleteButton: {
+    backgroundColor: 'rgba(235, 107, 120, 0.08)',
+    borderColor: 'rgba(235, 107, 120, 0.25)',
   },
   deleteButtonPressed: {
     opacity: 0.75,

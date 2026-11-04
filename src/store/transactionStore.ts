@@ -54,6 +54,7 @@ interface TransactionState {
   updateTransaction: (
     id: string,
     params: Partial<{
+      type: TransactionType;
       amount: number;
       walletId: string;
       toWalletId: string | null;
