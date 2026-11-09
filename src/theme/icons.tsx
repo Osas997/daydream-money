@@ -48,11 +48,13 @@ import {
   Upload,
   Database,
   Tag,
+  LayoutDashboard,
   LucideProps,
 } from 'lucide-react-native';
 
 export type IconName =
   | 'home'
+  | 'dashboard'
   | 'history'
   | 'plus'
   | 'budget'
@@ -101,6 +103,7 @@ export type IconName =
 
 const iconMap: Record<string, React.FC<LucideProps>> = {
   home: Home,
+  dashboard: LayoutDashboard,
   history: Clock,
   plus: Plus,
   budget: PieChart,

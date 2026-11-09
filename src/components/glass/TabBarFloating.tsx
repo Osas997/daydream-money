@@ -14,7 +14,7 @@ interface TabItem {
 }
 
 const TABS: TabItem[] = [
-  { name: 'index', label: 'Beranda', icon: 'home' },
+  { name: 'index', label: 'Beranda', icon: 'dashboard' },
   { name: 'transactions', label: 'Riwayat', icon: 'history' },
   { name: 'budgets', label: 'Anggaran', icon: 'budget' },
   { name: 'reports', label: 'Laporan', icon: 'report' },
@@ -40,7 +40,7 @@ function AnimatedTabItem({ tab, isFocused, onPress }: AnimatedTabItemProps) {
 
   const iconScale = anim.interpolate({
     inputRange: [0, 1],
-    outputRange: [1, 1.14],
+    outputRange: [1, 1.12],
   });
 
   return (
@@ -53,12 +53,18 @@ function AnimatedTabItem({ tab, isFocused, onPress }: AnimatedTabItemProps) {
       accessibilityRole="button"
       accessibilityLabel={tab.label}
     >
-      <Animated.View style={{ transform: [{ scale: iconScale }] }}>
+      <Animated.View
+        style={[
+          styles.iconWrap,
+          isFocused && styles.activeIconWrap,
+          { transform: [{ scale: iconScale }] },
+        ]}
+      >
         <AppIcon
           name={tab.icon}
-          size={22}
+          size={20}
           color={isFocused ? colors.primary : colors.onSurfaceMuted}
-          strokeWidth={isFocused ? 2.2 : 1.6}
+          strokeWidth={isFocused ? 2.3 : 1.7}
         />
       </Animated.View>
       <Text
@@ -204,9 +210,20 @@ const styles = StyleSheet.create({
   tabItemPressed: {
     opacity: 0.7,
   },
+  iconWrap: {
+    paddingHorizontal: 12,
+    paddingVertical: 3,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 28,
+  },
+  activeIconWrap: {
+    backgroundColor: 'rgba(129, 149, 229, 0.12)',
+  },
   tabLabel: {
     fontSize: 10,
-    marginTop: 2,
+    marginTop: 1,
     letterSpacing: -0.2,
     textAlign: 'center',
   },
