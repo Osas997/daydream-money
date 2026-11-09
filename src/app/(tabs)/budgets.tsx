@@ -5,21 +5,19 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  Modal,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   RefreshControl,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PageGradient } from '../../components/PageGradient';
 import { GlassCard } from '../../components/glass/GlassCard';
+import { KeyboardAwareModal } from '../../components/glass/KeyboardAwareModal';
 import { EmptyStateCard } from '../../components/glass/EmptyStateCard';
 import { Heading } from '../../components/glass/Heading';
 import { ButtonPrimary } from '../../components/glass/ButtonPrimary';
 import { ButtonIconGlass } from '../../components/glass/ButtonIconGlass';
-import { InputText } from '../../components/glass/InputText';
+import { MoneyInput } from '../../components/glass/MoneyInput';
 import { CategoryPickerHorizontal } from '../../components/forms/CategoryPickerHorizontal';
 import { useBudgetStore } from '../../store/budgetStore';
 import { useCategoryStore } from '../../store/categoryStore';
@@ -302,53 +300,45 @@ export default function BudgetsScreen() {
       </ScrollView>
 
       {/* Add / Edit Budget Modal */}
-      <Modal
+      <KeyboardAwareModal
         visible={modalVisible}
-        transparent
-        animationType="slide"
         onRequestClose={() => setModalVisible(false)}
       >
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <GlassCard style={styles.modalContent} padding={spacing.lg}>
-            <View style={styles.modalHeader}>
-              <Text style={[typography.headlineSm, styles.modalTitle]}>
-                Atur Batas Anggaran
-              </Text>
-              <Pressable onPress={() => setModalVisible(false)}>
-                <AppIcon name="close" size={22} color={colors.onSurface} />
-              </Pressable>
-            </View>
-
-            <Text style={[typography.caption, styles.modalLabel]}>
-              PILIH KATEGORI
+        <GlassCard style={styles.modalContent} padding={spacing.lg}>
+          <View style={styles.modalHeader}>
+            <Text style={[typography.headlineSm, styles.modalTitle]}>
+              Atur Batas Anggaran
             </Text>
-            <CategoryPickerHorizontal
-              categories={expenseCategories}
-              selectedCategoryId={selectedCatId}
-              onSelectCategory={(id) => setSelectedCatId(id)}
-            />
+            <Pressable onPress={() => setModalVisible(false)}>
+              <AppIcon name="close" size={22} color={colors.onSurface} />
+            </Pressable>
+          </View>
 
-            <Text style={[typography.caption, styles.modalLabel, { marginTop: spacing.md }]}>
-              NOMINAL BATAS (Rp)
-            </Text>
-            <InputText
-              placeholder="Contoh: 1.500.000 atau 1.5jt"
-              value={budgetLimitText}
-              onChangeText={setBudgetLimitText}
-              keyboardType="numeric"
-            />
+          <Text style={[typography.caption, styles.modalLabel]}>
+            PILIH KATEGORI
+          </Text>
+          <CategoryPickerHorizontal
+            categories={expenseCategories}
+            selectedCategoryId={selectedCatId}
+            onSelectCategory={(id) => setSelectedCatId(id)}
+          />
 
-            <ButtonPrimary
-              label="Simpan Anggaran"
-              onPress={handleSave}
-              style={styles.modalSaveBtn}
-            />
-          </GlassCard>
-        </KeyboardAvoidingView>
-      </Modal>
+          <Text style={[typography.caption, styles.modalLabel, { marginTop: spacing.md }]}>
+            NOMINAL BATAS (Rp)
+          </Text>
+          <MoneyInput
+            placeholder="Contoh: 1.500.000 atau 1.5jt"
+            value={budgetLimitText}
+            onChangeText={setBudgetLimitText}
+          />
+
+          <ButtonPrimary
+            label="Simpan Anggaran"
+            onPress={handleSave}
+            style={styles.modalSaveBtn}
+          />
+        </GlassCard>
+      </KeyboardAwareModal>
     </PageGradient>
   );
 }
@@ -486,12 +476,6 @@ const styles = StyleSheet.create({
   itemFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-    padding: spacing.sm,
   },
   modalContent: {
     borderRadius: radius.xl,

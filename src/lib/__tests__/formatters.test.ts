@@ -2,6 +2,7 @@ import { describe, test, expect } from '@jest/globals';
 import {
   formatCurrency,
   formatNumberWithDots,
+  formatMoneyInput,
   getFinancialMonthRange,
   getMonthName,
   getRelativeDateLabel,
@@ -25,6 +26,46 @@ describe('Formatters Unit Tests', () => {
   test('formatNumberWithDots', () => {
     expect(formatNumberWithDots(35000)).toBe('35.000');
     expect(formatNumberWithDots(1000000)).toBe('1.000.000');
+  });
+
+  test('formatMoneyInput adds thousand separators while typing', () => {
+    expect(formatMoneyInput('')).toBe('');
+    expect(formatMoneyInput('0')).toBe('0');
+    expect(formatMoneyInput('150')).toBe('150');
+    expect(formatMoneyInput('1500')).toBe('1.500');
+    expect(formatMoneyInput('1500000')).toBe('1.500.000');
+    expect(formatMoneyInput('12500000')).toBe('12.500.000');
+    // Every intermediate typing step must keep the parsed value stable.
+    expect(formatMoneyInput('1.5000')).toBe('15.000');
+    expect(formatMoneyInput('15.0000')).toBe('150.000');
+    expect(formatMoneyInput('1.500.0000')).toBe('15.000.000');
+  });
+
+  test('formatMoneyInput is idempotent for formatted values', () => {
+    expect(formatMoneyInput('1.500')).toBe('1.500');
+    expect(formatMoneyInput('1.500.000')).toBe('1.500.000');
+    expect(formatMoneyInput('Rp 2.500.000')).toBe('2.500.000');
+    expect(formatMoneyInput('007')).toBe('7');
+  });
+
+  test('formatMoneyInput keeps shorthand units', () => {
+    expect(formatMoneyInput('50rb')).toBe('50rb');
+    expect(formatMoneyInput('500k')).toBe('500k');
+    expect(formatMoneyInput('3jt')).toBe('3jt');
+    expect(formatMoneyInput('1.5jt')).toBe('1.5jt');
+    expect(formatMoneyInput('1,5jt')).toBe('1,5jt');
+    expect(formatMoneyInput('1jt500rb')).toBe('1jt500rb');
+    expect(formatMoneyInput('rb50')).toBe('rb50');
+    expect(formatMoneyInput('1000jt')).toBe('1.000jt');
+    expect(formatMoneyInput('1.5j')).toBe('1.5j');
+    expect(formatMoneyInput('1.5jt', '1.5j')).toBe('1.5jt');
+  });
+
+  test('formatMoneyInput backspaces out of grouped numbers', () => {
+    expect(formatMoneyInput('1.00', '1.000')).toBe('100');
+    expect(formatMoneyInput('1.50', '1.500')).toBe('150');
+    expect(formatMoneyInput('1.000.00', '1.000.000')).toBe('100.000');
+    expect(formatMoneyInput('1.5j', '1.5jt')).toBe('1.5j');
   });
 
   test('getMonthName returns Indonesian month name', () => {

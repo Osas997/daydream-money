@@ -65,6 +65,105 @@ export function formatNumberWithDots(amount: number): string {
   return abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 
+/**
+ * Formats a money input string while the user types, adding a dot for every
+ * three digits ("1500000" -> "1.500.000").
+ *
+ * Shorthand units supported by `parseNominal` are preserved ("50rb", "1.5jt",
+ * "1jt500rb"), and a single dot/comma followed by fewer than three digits is
+ * kept as a decimal separator ("1.5jt") so the displayed value always parses
+ * back to the same amount. Pass the previous value so deleting a digit from a
+ * grouped number ("1.000" -> "1.00") is read as "100", not "1.00".
+ */
+export function formatMoneyInput(value: string, previousValue = ''): string {
+  if (!value) return '';
+
+  const { numberText, unitText: rawUnit } = splitNumberAndUnit(value);
+  // Keep unit shorthands (including partially typed ones like "1.5j").
+  const unit = /^(r|k|j)/i.test(rawUnit) ? rawUnit : '';
+
+  const previousNumberText = splitNumberAndUnit(previousValue).numberText;
+  const digitsChanged =
+    numberText.replace(/[^0-9.,]/g, '') !==
+    previousNumberText.replace(/[^0-9.,]/g, '');
+  const isDeleting = value.length < previousValue.length && digitsChanged;
+
+  const { integerDigits, decimalSeparator, decimalDigits } = analyzeMoneyNumber(
+    numberText,
+    isDeleting && !numberText.includes(',')
+  );
+
+  const groupedInteger = groupThousands(integerDigits);
+  const decimals =
+    decimalSeparator !== null ? `${decimalSeparator}${decimalDigits}` : '';
+
+  if (!groupedInteger && !decimals && !unit) return '';
+  if (!groupedInteger && !unit && decimals) return `0${decimals}`;
+
+  return `${groupedInteger}${decimals}${unit}`;
+}
+
+function splitNumberAndUnit(text: string): {
+  numberText: string;
+  unitText: string;
+} {
+  // Accept pasted "Rp 1.250.000" style values.
+  const withoutCurrency = text.replace(/^\s*rp\.?\s*/i, '');
+  const match = withoutCurrency.match(/^([^a-zA-Z]*)([a-zA-Z].*)$/);
+  return match
+    ? { numberText: match[1], unitText: match[2] }
+    : { numberText: withoutCurrency, unitText: '' };
+}
+
+function groupThousands(digits: string): string {
+  if (!digits) return '';
+  const normalized = digits.replace(/^0+(?=\d)/, '');
+  return normalized.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function analyzeMoneyNumber(
+  text: string,
+  forceGrouping = false
+): {
+  integerDigits: string;
+  decimalSeparator: '.' | ',' | null;
+  decimalDigits: string;
+} {
+  const cleaned = text.replace(/[^0-9.,]/g, '');
+  const lastSeparator = Math.max(
+    cleaned.lastIndexOf('.'),
+    cleaned.lastIndexOf(',')
+  );
+
+  if (lastSeparator === -1) {
+    return {
+      integerDigits: cleaned,
+      decimalSeparator: null,
+      decimalDigits: '',
+    };
+  }
+
+  const separator = cleaned[lastSeparator] as '.' | ',';
+  const separatorCount = cleaned.split(separator).length - 1;
+  const digitsAfter = cleaned.slice(lastSeparator + 1).replace(/\D/g, '');
+
+  // Mirror `parseNominal`: one separator followed by up to two digits is a
+  // decimal, everything else is a thousand separator.
+  if (!forceGrouping && separatorCount === 1 && digitsAfter.length <= 2) {
+    return {
+      integerDigits: cleaned.slice(0, lastSeparator).replace(/\D/g, ''),
+      decimalSeparator: separator,
+      decimalDigits: digitsAfter,
+    };
+  }
+
+  return {
+    integerDigits: cleaned.replace(/\D/g, ''),
+    decimalSeparator: null,
+    decimalDigits: '',
+  };
+}
+
 export function getMonthName(yearMonth: string): string {
   // input: 'YYYY-MM'
   const parts = yearMonth.split('-');

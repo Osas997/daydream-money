@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+} from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PageGradient } from '../../components/PageGradient';
 import { GlassCard } from '../../components/glass/GlassCard';
+import { KeyboardAwareScrollView } from '../../components/glass/KeyboardAwareScrollView';
 import { ButtonPrimary } from '../../components/glass/ButtonPrimary';
 import { InputText } from '../../components/glass/InputText';
+import { MoneyInput } from '../../components/glass/MoneyInput';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useWalletStore } from '../../store/walletStore';
 import { useBudgetStore } from '../../store/budgetStore';
@@ -86,7 +93,12 @@ export default function OnboardingScreen() {
         </View>
 
         {/* Slide Carousel Cards */}
-        <View style={styles.cardArea}>
+        <KeyboardAwareScrollView
+          style={styles.cardArea}
+          contentContainerStyle={styles.cardAreaContent}
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+        >
           {slide === 0 && (
             <GlassCard style={styles.slideCard} padding={spacing.xl}>
               <View style={styles.iconCircle}>
@@ -144,33 +156,32 @@ export default function OnboardingScreen() {
                   value={walletName}
                   onChangeText={setWalletName}
                   placeholder="Tunai / BCA / GoPay"
-                  containerStyle={{ marginBottom: spacing.xs }}
+                  containerStyle={{ marginBottom: spacing.md }}
                 />
 
                 <Text style={[typography.caption, styles.fieldLabel]}>
                   SALDO AWAL (OPSIONAL)
                 </Text>
-                <InputText
+                <MoneyInput
                   value={initialBalanceText}
                   onChangeText={setInitialBalanceText}
                   placeholder="0 atau 1.5jt"
-                  keyboardType="numeric"
-                  containerStyle={{ marginBottom: spacing.xs }}
+                  containerStyle={{ marginBottom: spacing.md }}
                 />
 
                 <Text style={[typography.caption, styles.fieldLabel]}>
                   BATAS ANGGARAN BULAN INI (OPSIONAL)
                 </Text>
-                <InputText
+                <MoneyInput
                   value={budgetLimitText}
                   onChangeText={setBudgetLimitText}
                   placeholder="Contoh: 3jt atau 5.000.000"
-                  keyboardType="numeric"
+                  containerStyle={{ marginBottom: spacing.md }}
                 />
               </View>
             </GlassCard>
           )}
-        </View>
+        </KeyboardAwareScrollView>
 
         {/* Bottom Pagination & Navigation */}
         <View style={styles.bottomSection}>
@@ -221,12 +232,14 @@ const styles = StyleSheet.create({
   },
   cardArea: {
     flex: 1,
-    justifyContent: 'center',
     marginVertical: spacing.md,
   },
+  cardAreaContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
   slideCard: {
-    alignItems: 'center',
-    textAlign: 'center',
+    width: '100%',
   },
   iconCircle: {
     width: 56,
@@ -236,10 +249,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
+    alignSelf: 'center',
   },
   eyebrow: {
     color: colors.primary,
     marginBottom: 6,
+    textAlign: 'center',
   },
   title: {
     textAlign: 'center',

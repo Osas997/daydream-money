@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PageGradient } from '../../components/PageGradient';
 import { TopAppBar } from '../../components/glass/TopAppBar';
 import { GlassCard } from '../../components/glass/GlassCard';
+import { KeyboardAwareScrollView } from '../../components/glass/KeyboardAwareScrollView';
 import { InputText } from '../../components/glass/InputText';
+import { MoneyInput } from '../../components/glass/MoneyInput';
 import { ButtonPrimary } from '../../components/glass/ButtonPrimary';
 import { useWalletStore } from '../../store/walletStore';
 import { WalletType } from '../../db/types';
@@ -79,13 +81,14 @@ export default function AddWalletScreen() {
         title="Tambah Dompet"
       />
 
-      <ScrollView
+      <KeyboardAwareScrollView
         contentContainerStyle={[
           styles.content,
           {
             paddingBottom: Math.max(insets.bottom, 24),
           },
         ]}
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
         <GlassCard style={styles.card}>
@@ -143,11 +146,10 @@ export default function AddWalletScreen() {
           <Text style={[typography.caption, styles.label, { marginTop: spacing.md }]}>
             SALDO AWAL (Rp)
           </Text>
-          <InputText
+          <MoneyInput
             placeholder="0 atau 1.5jt"
             value={initialBalanceText}
             onChangeText={setInitialBalanceText}
-            keyboardType="numeric"
             containerStyle={styles.inputWrap}
           />
 
@@ -175,7 +177,7 @@ export default function AddWalletScreen() {
           loading={loading}
           style={styles.saveBtn}
         />
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </PageGradient>
   );
 }

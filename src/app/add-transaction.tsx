@@ -10,7 +10,9 @@ import {
   Platform,
   Keyboard,
   LayoutAnimation,
+  TextInput,
   UIManager,
+  ActivityIndicator,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,15 +28,19 @@ import { useWalletStore } from '../store/walletStore';
 import { useCategoryStore } from '../store/categoryStore';
 import { useTransactionStore } from '../store/transactionStore';
 import { TransactionType } from '../db/types';
+import * as txRepo from '../db/repositories/transactionsRepo';
 import { colors, radius } from '../theme/tokens';
 import { typography, fontFamilies } from '../theme/typography';
 import { AppIcon } from '../theme/icons';
+import { useKeyboardHeight } from '../hooks/useKeyboardHeight';
 import { parseNominal } from '../lib/nominalParser';
-import { formatCurrency, formatDateLabel, isToday, isYesterday } from '../lib/formatters';
+import { formatCurrency, formatDateLabel, isToday, isYesterday, formatMoneyInput } from '../lib/formatters';
 
 export default function AddTransactionModal() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ type?: string; editId?: string }>();
+  const editId = params.editId;
+  const isEditing = Boolean(editId);
 
   const initialType: TransactionType =
     params.type === 'income'
@@ -49,8 +55,9 @@ export default function AddTransactionModal() {
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [isKeypadOpen, setIsKeypadOpen] = useState(true);
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const keyboardHeight = useKeyboardHeight();
   const scrollViewRef = useRef<React.ElementRef<typeof ScrollView>>(null);
+  const scrollOffsetRef = useRef(0);
 
   useEffect(() => {
     if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -59,23 +66,58 @@ export default function AddTransactionModal() {
     const showSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       () => {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setIsKeyboardVisible(true);
+        // Collapse instantly: animating the layout here would also animate the
+        // keyboard padding, which delays the final viewport past the scroll.
         setIsKeypadOpen(false);
-        setTimeout(() => {
-          scrollViewRef.current?.scrollToEnd({ animated: true });
-        }, 80);
       }
     );
+
+    // Scroll only after the keyboard has finished animating. On iOS a scroll
+    // started on `keyboardWillShow` is clamped by the still tall viewport, so
+    // the note field ends up behind the keyboard once the animation is done.
+    // Measure the focused field instead of blindly scrolling to the end so the
+    // note keeps a comfortable margin above the keyboard ("not too low") and
+    // the form is not pushed further up than necessary ("not too high").
+    const didShowSub = Keyboard.addListener('keyboardDidShow', () => {
+      setTimeout(() => {
+        const scrollView = scrollViewRef.current;
+        const focusedInput = TextInput.State.currentlyFocusedInput();
+        if (
+          !scrollView ||
+          !focusedInput ||
+          typeof focusedInput.measureInWindow !== 'function'
+        ) {
+          return;
+        }
+
+        scrollView.measureInWindow((_x, viewportY, _w, viewportHeight) => {
+          focusedInput.measureInWindow(
+            (_inputX, inputY, _inputWidth, inputHeight) => {
+              const keyboardMargin = 24;
+              const overflow =
+                inputY + inputHeight + keyboardMargin - (viewportY + viewportHeight);
+
+              if (overflow > 0) {
+                scrollView.scrollTo({
+                  y: scrollOffsetRef.current + overflow,
+                  animated: true,
+                });
+              }
+            }
+          );
+        });
+      }, 150);
+    });
+
     const hideSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
       () => {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setIsKeyboardVisible(false);
       }
     );
     return () => {
       showSub.remove();
+      didShowSub.remove();
       hideSub.remove();
     };
   }, []);
@@ -86,7 +128,6 @@ export default function AddTransactionModal() {
       const next = open !== undefined ? open : !prev;
       if (next) {
         Keyboard.dismiss();
-        setIsKeyboardVisible(false);
       }
       return next;
     });
@@ -94,10 +135,6 @@ export default function AddTransactionModal() {
 
   const handleNoteFocus = (e: any) => {
     setIsKeypadOpen(false);
-    setIsKeyboardVisible(true);
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 100);
     if (Platform.OS === 'web' && e?.target?.scrollIntoView) {
       setTimeout(() => {
         e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -107,7 +144,7 @@ export default function AddTransactionModal() {
 
   const { wallets } = useWalletStore();
   const { expenseCategories, incomeCategories } = useCategoryStore();
-  const { createTransaction } = useTransactionStore();
+  const { createTransaction, updateTransaction } = useTransactionStore();
 
   const [selectedWalletId, setSelectedWalletId] = useState<string | null>(
     wallets[0]?.id || null
@@ -122,6 +159,70 @@ export default function AddTransactionModal() {
   );
 
   const [loading, setLoading] = useState(false);
+  const [isLoadingEdit, setIsLoadingEdit] = useState(isEditing);
+  const originalTimeRef = useRef<{
+    hours: number;
+    minutes: number;
+    seconds: number;
+    milliseconds: number;
+  } | null>(null);
+
+  // Hydrate the form with an existing transaction when opened in edit mode.
+  useEffect(() => {
+    if (!editId) return;
+    let cancelled = false;
+
+    async function loadTransactionToEdit() {
+      try {
+        const tx = await txRepo.getTransactionById(editId!);
+        if (cancelled) return;
+
+        if (!tx) {
+          Alert.alert(
+            'Transaksi Tidak Ditemukan',
+            'Data transaksi ini sudah tidak tersedia.'
+          );
+          router.back();
+          return;
+        }
+
+        const occurredDate = new Date(tx.occurredAt);
+        originalTimeRef.current = {
+          hours: occurredDate.getHours(),
+          minutes: occurredDate.getMinutes(),
+          seconds: occurredDate.getSeconds(),
+          milliseconds: occurredDate.getMilliseconds(),
+        };
+
+        setTxType(tx.type);
+        setNominalRaw(String(tx.amount));
+        setNote(tx.note ?? '');
+        setSelectedDate(occurredDate);
+        setSelectedWalletId(tx.walletId);
+        setToWalletId(
+          tx.toWalletId ??
+            useWalletStore
+              .getState()
+              .wallets.find((wallet) => wallet.id !== tx.walletId)?.id ??
+            null
+        );
+        setSelectedCategoryId(tx.categoryId ?? null);
+      } catch (e) {
+        console.error('Error loading transaction for edit:', e);
+        if (!cancelled) {
+          Alert.alert('Gagal Memuat', 'Terjadi kesalahan saat memuat transaksi.');
+          router.back();
+        }
+      } finally {
+        if (!cancelled) setIsLoadingEdit(false);
+      }
+    }
+
+    loadTransactionToEdit();
+    return () => {
+      cancelled = true;
+    };
+  }, [editId]);
 
   // Keypad operations
   const handleDigitPress = (digit: string) => {
@@ -187,10 +288,17 @@ export default function AddTransactionModal() {
     setLoading(true);
     try {
       const txDate = new Date(selectedDate);
-      const now = new Date();
-      txDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+      if (isEditing && originalTimeRef.current) {
+        // Keep the original clock time so editing other fields does not
+        // silently change when the transaction happened.
+        const { hours, minutes, seconds, milliseconds } = originalTimeRef.current;
+        txDate.setHours(hours, minutes, seconds, milliseconds);
+      } else {
+        const now = new Date();
+        txDate.setHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+      }
 
-      await createTransaction({
+      const payload = {
         type: txType,
         amount: parsedAmount,
         walletId: selectedWalletId,
@@ -198,11 +306,20 @@ export default function AddTransactionModal() {
         categoryId: txType === 'transfer' ? null : selectedCategoryId,
         note: note.trim() || null,
         occurredAt: txDate.toISOString(),
-      });
+      };
+
+      if (isEditing && editId) {
+        await updateTransaction(editId, payload);
+      } else {
+        await createTransaction(payload);
+      }
 
       router.back();
     } catch (e: any) {
-      Alert.alert('Gagal Menyimpan', e.message || 'Terjadi kesalahan saat menyimpan');
+      Alert.alert(
+        isEditing ? 'Gagal Memperbarui' : 'Gagal Menyimpan',
+        e.message || 'Terjadi kesalahan saat menyimpan'
+      );
     } finally {
       setLoading(false);
     }
@@ -214,6 +331,23 @@ export default function AddTransactionModal() {
       setToWalletId(wallets.find((wallet) => wallet.id !== walletId)?.id ?? null);
     }
   };
+
+  if (isEditing && isLoadingEdit) {
+    return (
+      <PageGradient>
+        <View
+          style={[
+            styles.container,
+            styles.loadingContainer,
+            { paddingTop: Math.max(insets.top, 16) },
+          ]}
+        >
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Memuat transaksi...</Text>
+        </View>
+      </PageGradient>
+    );
+  }
 
   return (
     <PageGradient>
@@ -227,7 +361,13 @@ export default function AddTransactionModal() {
           styles.container,
           {
             paddingTop: Math.max(insets.top, 16),
-            paddingBottom: Math.max(insets.bottom, 16),
+            // Android edge-to-edge does not resize the window for the IME, so
+            // lift the whole screen (scroll area + bottom bar) above it.
+            // iOS is already handled by the KeyboardAvoidingView above.
+            paddingBottom:
+              Platform.OS === 'android' && keyboardHeight > 0
+                ? keyboardHeight
+                : Math.max(insets.bottom, 16),
           },
         ]}
       >
@@ -241,7 +381,9 @@ export default function AddTransactionModal() {
             accessibilityLabel="Tutup"
           />
           <Text style={styles.headerTitle}>
-            {txType === 'expense'
+            {isEditing
+              ? 'Edit Transaksi'
+              : txType === 'expense'
               ? 'Catat Pengeluaran'
               : txType === 'income'
               ? 'Catat Pemasukan'
@@ -314,13 +456,14 @@ export default function AddTransactionModal() {
         <ScrollView
           ref={scrollViewRef}
           style={styles.scrollArea}
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingBottom: isKeyboardVisible ? 160 : 40 },
-          ]}
+          contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
+          onScroll={(event) => {
+            scrollOffsetRef.current = event.nativeEvent.contentOffset.y;
+          }}
+          scrollEventThrottle={16}
         >
           {/* Lavender amount stage with centered raised amount card. */}
           <View style={styles.amountStage}>
@@ -349,7 +492,7 @@ export default function AddTransactionModal() {
               </Text>
               {nominalRaw ? (
                 <Text style={styles.rawHelper}>
-                  Input: {nominalRaw}
+                  Input: {formatMoneyInput(nominalRaw)}
                 </Text>
               ) : (
                 <Text style={styles.rawPlaceholder}>
@@ -482,7 +625,6 @@ export default function AddTransactionModal() {
               value={note}
               onChangeText={setNote}
               onFocus={handleNoteFocus}
-              onBlur={() => setIsKeyboardVisible(false)}
               returnKeyType="done"
               onSubmitEditing={() => Keyboard.dismiss()}
               rightIcon={note.length > 0 ? 'close' : undefined}
@@ -517,7 +659,7 @@ export default function AddTransactionModal() {
 
               <View style={styles.keypadSaveWrap}>
                 <ButtonPrimary
-                  label="Simpan Transaksi"
+                  label={isEditing ? 'Simpan Perubahan' : 'Simpan Transaksi'}
                   icon="check"
                   onPress={handleSave}
                   loading={loading}
@@ -541,7 +683,7 @@ export default function AddTransactionModal() {
 
               <View style={{ flex: 1, marginLeft: 10 }}>
                 <ButtonPrimary
-                  label="Simpan Transaksi"
+                  label={isEditing ? 'Simpan Perubahan' : 'Simpan Transaksi'}
                   icon="check"
                   onPress={handleSave}
                   loading={loading}
@@ -572,6 +714,17 @@ const styles = StyleSheet.create({
   },
   keyboardAvoider: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    fontFamily: fontFamilies.medium,
+    color: colors.onSurfaceVariant,
   },
   header: {
     flexDirection: 'row',
@@ -616,7 +769,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: 24,
   },
   amountStage: {
     backgroundColor: '#DFE5F8',
